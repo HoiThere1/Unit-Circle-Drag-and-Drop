@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unit Circle — Study Tool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,300&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0e0e12;
+    --surface: #16161c;
+    --surface2: #1e1e28;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.15);
+    --text: #f0ede8;
+    --text2: #9997a0;
+    --text3: #5a5866;
+    --accent: #c8b4ff;
+    --accent2: #7c5dfa;
+    --green: #4eca8b;
+    --red: #ff6b6b;
+    --gold: #f5c842;
+    --dot: #c8b4ff;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .glow-orb {
+    position: fixed;
+    width: 600px; height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(124,93,250,0.12) 0%, transparent 70%);
+    top: -100px; left: 50%;
+    transform: translateX(-50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+  }
+
+  /* Header */
+  header {
+    padding: 40px 0 32px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 36px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  header h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 300;
+    font-size: 42px;
+    letter-spacing: -1px;
+    line-height: 1;
+    color: var(--text);
+  }
+
+  header h1 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .header-sub {
+    font-size: 12px;
+    color: var(--text3);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* Score pill */
+  #score-pill {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 100px;
+    padding: 8px 20px;
+    font-size: 13px;
+    color: var(--text2);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all .3s;
+  }
+
+  #score-pill .score-num {
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--text);
+    font-family: 'Fraunces', serif;
+  }
+
+  /* Mode bar */
+  .mode-bar {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+
+  .mode-btn {
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text3);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all .2s;
+    letter-spacing: 0.05em;
+  }
+
+  .mode-btn:hover { border-color: var(--border2); color: var(--text2); }
+  .mode-btn.active {
+    background: var(--accent2);
+    border-color: var(--accent2);
+    color: #fff;
+  }
+
+  /* Layout */
+  .main-layout {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 32px;
+    align-items: start;
+  }
+
+  @media (max-width: 720px) {
+    .main-layout { grid-template-columns: 1fr; }
+    header h1 { font-size: 32px; }
+  }
+
+  /* SVG wrapper */
+  .circle-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #circle-svg { width: 100%; height: 100%; display: block; }
+
+  /* Right panel */
+  .right-panel { display: flex; flex-direction: column; gap: 20px; }
+
+  .panel-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .panel-card h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 300;
+    font-size: 16px;
+    color: var(--text2);
+    margin-bottom: 14px;
+    letter-spacing: 0.02em;
+  }
+
+  /* Tile bank */
+  .tile-bank {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    min-height: 80px;
+  }
+
+  .tile {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    cursor: grab;
+    transition: all .15s;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  .tile:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-1px); }
+  .tile:active { cursor: grabbing; transform: scale(0.97); }
+  .tile.used { opacity: 0.2; pointer-events: none; }
+  .tile.dragging { opacity: 0.5; }
+
+  /* Drop slots */
+  .drop-slot {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text3);
+    background: transparent;
+    border: 1px dashed var(--text3);
+    border-radius: 5px;
+    padding: 3px 6px;
+    cursor: pointer;
+    transition: all .15s;
+    white-space: nowrap;
+    display: inline-block;
+    min-width: 44px;
+    text-align: center;
+  }
+
+  .drop-slot.over { border-color: var(--accent); color: var(--accent); background: rgba(200,180,255,0.08); }
+  .drop-slot.correct { border-color: var(--green); color: var(--green); background: rgba(78,202,139,0.1); border-style: solid; }
+  .drop-slot.wrong { border-color: var(--red); color: var(--red); background: rgba(255,107,107,0.1); border-style: solid; }
+  .drop-slot.filled { border-color: var(--border2); color: var(--text); border-style: solid; }
+
+  /* Buttons */
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  .btn {
+    padding: 10px 22px;
+    border-radius: 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all .2s;
+    border: 1px solid var(--border2);
+    color: var(--text);
+    background: var(--surface2);
+  }
+
+  .btn:hover { border-color: var(--accent2); color: var(--accent); transform: translateY(-1px); }
+  .btn:active { transform: scale(0.98); }
+  .btn.primary { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+  .btn.primary:hover { background: #9b7bff; border-color: #9b7bff; color: #fff; }
+
+  /* Feedback */
+  #feedback {
+    font-size: 12px;
+    min-height: 16px;
+    color: var(--text2);
+    transition: color .3s;
+    letter-spacing: 0.03em;
+  }
+
+  #feedback.good { color: var(--green); }
+  #feedback.bad { color: var(--gold); }
+
+  /* Reference card */
+  .ref-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    font-size: 11px;
+  }
+
+  .ref-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 8px;
+    background: var(--surface2);
+    border-radius: 5px;
+    color: var(--text2);
+    gap: 8px;
+  }
+
+  .ref-row span:first-child { color: var(--text3); }
+  .ref-row span:last-child { color: var(--accent); }
+
+  /* Progress bar */
+  .progress-wrap {
+    height: 3px;
+    background: var(--surface2);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 6px;
+  }
+
+  #progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+    border-radius: 2px;
+    width: 0%;
+    transition: width .4s cubic-bezier(.34,1.56,.64,1);
+  }
+
+  .mode-label {
+    font-size: 11px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+  }
+</style>
+</head>
+<body>
+<div class="glow-orb"></div>
+
+<div class="container">
+  <header>
+    <div>
+      <div class="header-sub">Interactive study tool</div>
+      <h1>Unit <em>Circle</em></h1>
+    </div>
+    <div id="score-pill">
+      <span>score</span>
+      <span class="score-num" id="score-val">—</span>
+      <span id="score-total"></span>
+    </div>
+  </header>
+
+  <div class="mode-bar" id="mode-bar">
+    <button class="mode-btn active" data-mode="degrees">Degrees</button>
+    <button class="mode-btn" data-mode="radians">Radians</button>
+    <button class="mode-btn" data-mode="coords">Coordinates</button>
+    <button class="mode-btn" data-mode="sin">sin θ</button>
+    <button class="mode-btn" data-mode="cos">cos θ</button>
+  </div>
+
+  <div class="main-layout">
+    <div class="circle-wrap">
+      <svg id="circle-svg" viewBox="0 0 440 440" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+
+    <div class="right-panel">
+      <div class="panel-card">
+        <div class="mode-label" id="mode-label">Degrees mode</div>
+        <h2>Drag onto the circle</h2>
+        <div class="tile-bank" id="tile-bank"></div>
+      </div>
+
+      <div class="panel-card">
+        <div id="feedback">Drag a label to a slot, then check your answers.</div>
+        <div class="progress-wrap"><div id="progress-bar"></div></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn primary" id="check-btn">Check answers</button>
+        <button class="btn" id="reset-btn">Reset</button>
+      </div>
+
+      <div class="panel-card">
+        <h2>Quick reference</h2>
+        <div class="ref-grid" id="ref-grid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const CX = 220, CY = 220, R = 160;
+
+const angles = [
+  { deg: 0,   rad: '0',      x: 1,      y: 0,      label: '0°',    rlabel: '0',       coord: '(1, 0)',         sin: '0',       cos: '1'        },
+  { deg: 30,  rad: 'π/6',   x: .866,   y: .5,     label: '30°',   rlabel: 'π/6',     coord: '(√3/2, 1/2)',    sin: '1/2',     cos: '√3/2'     },
+  { deg: 45,  rad: 'π/4',   x: .707,   y: .707,   label: '45°',   rlabel: 'π/4',     coord: '(√2/2, √2/2)',   sin: '√2/2',    cos: '√2/2'     },
+  { deg: 60,  rad: 'π/3',   x: .5,     y: .866,   label: '60°',   rlabel: 'π/3',     coord: '(1/2, √3/2)',    sin: '√3/2',    cos: '1/2'      },
+  { deg: 90,  rad: 'π/2',   x: 0,      y: 1,      label: '90°',   rlabel: 'π/2',     coord: '(0, 1)',         sin: '1',       cos: '0'        },
+  { deg: 120, rad: '2π/3',  x: -.5,    y: .866,   label: '120°',  rlabel: '2π/3',    coord: '(−1/2, √3/2)',   sin: '√3/2',    cos: '−1/2'     },
+  { deg: 135, rad: '3π/4',  x: -.707,  y: .707,   label: '135°',  rlabel: '3π/4',    coord: '(−√2/2, √2/2)',  sin: '√2/2',    cos: '−√2/2'    },
+  { deg: 150, rad: '5π/6',  x: -.866,  y: .5,     label: '150°',  rlabel: '5π/6',    coord: '(−√3/2, 1/2)',   sin: '1/2',     cos: '−√3/2'    },
+  { deg: 180, rad: 'π',     x: -1,     y: 0,      label: '180°',  rlabel: 'π',       coord: '(−1, 0)',        sin: '0',       cos: '−1'       },
+  { deg: 210, rad: '7π/6',  x: -.866,  y: -.5,    label: '210°',  rlabel: '7π/6',    coord: '(−√3/2, −1/2)',  sin: '−1/2',    cos: '−√3/2'    },
+  { deg: 225, rad: '5π/4',  x: -.707,  y: -.707,  label: '225°',  rlabel: '5π/4',    coord: '(−√2/2, −√2/2)', sin: '−√2/2',   cos: '−√2/2'    },
+  { deg: 240, rad: '4π/3',  x: -.5,    y: -.866,  label: '240°',  rlabel: '4π/3',    coord: '(−1/2, −√3/2)',  sin: '−√3/2',   cos: '−1/2'     },
+  { deg: 270, rad: '3π/2',  x: 0,      y: -1,     label: '270°',  rlabel: '3π/2',    coord: '(0, −1)',        sin: '−1',      cos: '0'        },
+  { deg: 300, rad: '5π/3',  x: .5,     y: -.866,  label: '300°',  rlabel: '5π/3',    coord: '(1/2, −√3/2)',   sin: '−√3/2',   cos: '1/2'      },
+  { deg: 315, rad: '7π/4',  x: .707,   y: -.707,  label: '315°',  rlabel: '7π/4',    coord: '(√2/2, −√2/2)',  sin: '−√2/2',   cos: '√2/2'     },
+  { deg: 330, rad: '11π/6', x: .866,   y: -.5,    label: '330°',  rlabel: '11π/6',   coord: '(√3/2, −1/2)',   sin: '−1/2',    cos: '√3/2'     },
+];
+
+let mode = 'degrees';
+let slotAnswers = {};
+let dragTile = null;
+
+function getLabel(a) {
+  return { degrees: a.label, radians: a.rlabel, coords: a.coord, sin: a.sin, cos: a.cos }[mode];
+}
+
+function shuffle(arr) {
+  let a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function getSlotPos(a) {
+  const rad = (a.deg * Math.PI) / 180;
+  const dist = R + 32;
+  return { px: CX + dist * Math.cos(rad), py: CY - dist * Math.sin(rad) };
+}
+
+function buildSVG() {
+  const svg = document.getElementById('circle-svg');
+  svg.innerHTML = '';
+  const ns = 'http://www.w3.org/2000/svg';
+  const mk = (tag, attrs) => { const el = document.createElementNS(ns, tag); Object.entries(attrs).forEach(([k,v]) => el.setAttribute(k,v)); return el; };
+
+  // Subtle radii lines
+  angles.forEach(a => {
+    const rad = (a.deg * Math.PI) / 180;
+    const px = CX + R * Math.cos(rad), py = CY - R * Math.sin(rad);
+    svg.appendChild(mk('line', { x1: CX, y1: CY, x2: px, y2: py, stroke: 'rgba(255,255,255,0.04)', 'stroke-width': '1' }));
+  });
+
+  // Axes
+  svg.appendChild(mk('line', { x1: CX - R - 20, y1: CY, x2: CX + R + 20, y2: CY, stroke: 'rgba(255,255,255,0.12)', 'stroke-width': '1' }));
+  svg.appendChild(mk('line', { x1: CX, y1: CY - R - 20, x2: CX, y2: CY + R + 20, stroke: 'rgba(255,255,255,0.12)', 'stroke-width': '1' }));
+
+  // Circle
+  svg.appendChild(mk('circle', { cx: CX, cy: CY, r: R, fill: 'none', stroke: 'rgba(200,180,255,0.3)', 'stroke-width': '1.5' }));
+
+  // Center dot
+  svg.appendChild(mk('circle', { cx: CX, cy: CY, r: 3, fill: 'rgba(200,180,255,0.4)' }));
+
+  // Quadrant labels
+  [['I', CX+52, CY-52], ['II', CX-52, CY-52], ['III', CX-52, CY+62], ['IV', CX+52, CY+62]].forEach(([q,x,y]) => {
+    const t = mk('text', { x, y, 'font-size': '13', fill: 'rgba(255,255,255,0.1)', 'text-anchor': 'middle', 'font-family': 'Fraunces, serif', 'font-style': 'italic' });
+    t.textContent = q; svg.appendChild(t);
+  });
+
+  // Axis labels
+  [['1', CX+R+8, CY-6], ['-1', CX-R-6, CY-6], ['1', CX+4, CY-R-6], ['-1', CX+4, CY+R+14]].forEach(([lbl,x,y]) => {
+    const t = mk('text', { x, y, 'font-size': '10', fill: 'rgba(255,255,255,0.25)', 'font-family': 'DM Mono, monospace' });
+    t.textContent = lbl; svg.appendChild(t);
+  });
+
+  // Dots and slots
+  angles.forEach(a => {
+    const rad = (a.deg * Math.PI) / 180;
+    const px = CX + R * Math.cos(rad), py = CY - R * Math.sin(rad);
+
+    // Dot
+    const dotG = document.createElementNS(ns, 'g');
+    const outer = mk('circle', { cx: px, cy: py, r: 6, fill: 'rgba(200,180,255,0.12)', stroke: 'rgba(200,180,255,0.4)', 'stroke-width': '1' });
+    const inner = mk('circle', { cx: px, cy: py, r: 3, fill: '#c8b4ff' });
+    dotG.appendChild(outer); dotG.appendChild(inner); svg.appendChild(dotG);
+
+    // Slot via foreignObject
+    const { px: sx, py: sy } = getSlotPos(a);
+    const isCoords = mode === 'coords';
+    const fw = isCoords ? 96 : 58, fh = 24;
+    const fo = document.createElementNS(ns, 'foreignObject');
+    fo.setAttribute('x', sx - fw/2); fo.setAttribute('y', sy - fh/2);
+    fo.setAttribute('width', fw); fo.setAttribute('height', fh);
+    fo.style.overflow = 'visible';
+
+    const slot = document.createElement('div');
+    slot.className = 'drop-slot';
+    slot.dataset.deg = a.deg;
+    const ans = slotAnswers[a.deg];
+    slot.textContent = ans || '?';
+    slot.style.fontSize = isCoords ? '9px' : '11px';
+    slot.style.minWidth = isCoords ? '88px' : '44px';
+    if (ans) slot.classList.add('filled');
+
+    slot.addEventListener('dragover', e => { e.preventDefault(); slot.classList.add('over'); });
+    slot.addEventListener('dragleave', () => slot.classList.remove('over'));
+    slot.addEventListener('drop', e => {
+      e.preventDefault(); slot.classList.remove('over');
+      if (!dragTile) return;
+      const val = dragTile.dataset.val;
+      const old = Object.keys(slotAnswers).find(k => slotAnswers[k] === val);
+      if (old !== undefined) slotAnswers[old] = null;
+      slotAnswers[a.deg] = val;
+      document.getElementById('feedback').textContent = 'Drag a label to a slot, then check your answers.';
+      document.getElementById('feedback').className = '';
+      buildTiles(); buildSVG();
+    });
+    slot.addEventListener('click', () => {
+      if (slotAnswers[a.deg]) { slotAnswers[a.deg] = null; buildTiles(); buildSVG(); }
+    });
+
+    fo.appendChild(slot); svg.appendChild(fo);
+  });
+}
+
+function buildTiles() {
+  const bank = document.getElementById('tile-bank');
+  const used = new Set(Object.values(slotAnswers).filter(Boolean));
+  bank.innerHTML = '';
+  shuffle(angles.map(a => getLabel(a))).forEach(lbl => {
+    const t = document.createElement('div');
+    t.className = 'tile' + (used.has(lbl) ? ' used' : '');
+    t.textContent = lbl; t.dataset.val = lbl; t.draggable = true;
+    t.addEventListener('dragstart', () => { dragTile = t; t.classList.add('dragging'); });
+    t.addEventListener('dragend', () => { dragTile = null; t.classList.remove('dragging'); });
+    bank.appendChild(t);
+  });
+}
+
+function buildRef() {
+  const grid = document.getElementById('ref-grid');
+  const special = [0, 30, 45, 60, 90];
+  grid.innerHTML = '';
+  special.forEach(deg => {
+    const a = angles.find(x => x.deg === deg);
+    const row = document.createElement('div');
+    row.className = 'ref-row';
+    row.innerHTML = `<span>${a.label} / ${a.rlabel}</span><span>${a.coord}</span>`;
+    grid.appendChild(row);
+  });
+}
+
+function checkAnswers() {
+  let correct = 0;
+  const slots = document.querySelectorAll('.drop-slot');
+  slots.forEach(slot => {
+    const deg = parseInt(slot.dataset.deg);
+    const a = angles.find(x => x.deg === deg);
+    const ans = slotAnswers[deg];
+    if (!ans) return;
+    slot.classList.remove('over', 'filled');
+    if (ans === getLabel(a)) { slot.classList.add('correct'); slot.classList.remove('wrong'); correct++; }
+    else { slot.classList.add('wrong'); slot.classList.remove('correct'); }
+  });
+  const filled = Object.values(slotAnswers).filter(Boolean).length;
+  const pct = Math.round((correct / 16) * 100);
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('score-val').textContent = `${correct}/${16}`;
+  document.getElementById('score-total').textContent = `(${pct}%)`;
+  const fb = document.getElementById('feedback');
+  if (correct === 16) { fb.textContent = '✓ Perfect score! All 16 correct!'; fb.className = 'good'; }
+  else if (correct >= 12) { fb.textContent = `${correct} of 16 correct — almost there!`; fb.className = 'bad'; }
+  else { fb.textContent = `${correct} of 16 correct — keep practicing!`; fb.className = 'bad'; }
+}
+
+function reset() {
+  slotAnswers = {};
+  document.getElementById('feedback').textContent = 'Drag a label to a slot, then check your answers.';
+  document.getElementById('feedback').className = '';
+  document.getElementById('score-val').textContent = '—';
+  document.getElementById('score-total').textContent = '';
+  document.getElementById('progress-bar').style.width = '0%';
+  buildTiles(); buildSVG();
+}
+
+document.getElementById('check-btn').addEventListener('click', checkAnswers);
+document.getElementById('reset-btn').addEventListener('click', reset);
+
+document.getElementById('mode-bar').addEventListener('click', e => {
+  const btn = e.target.closest('.mode-btn');
+  if (!btn) return;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  mode = btn.dataset.mode;
+  const labels = { degrees: 'Degrees mode', radians: 'Radians mode', coords: 'Coordinates mode', sin: 'Sine values mode', cos: 'Cosine values mode' };
+  document.getElementById('mode-label').textContent = labels[mode];
+  slotAnswers = {};
+  document.getElementById('feedback').textContent = 'Drag a label to a slot, then check your answers.';
+  document.getElementById('feedback').className = '';
+  document.getElementById('score-val').textContent = '—';
+  document.getElementById('score-total').textContent = '';
+  document.getElementById('progress-bar').style.width = '0%';
+  buildTiles(); buildSVG();
+});
+
+buildRef();
+buildTiles();
+buildSVG();
+</script>
+</body>
+</html>
